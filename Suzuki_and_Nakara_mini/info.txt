@@ -1,0 +1,27 @@
+多面的感情尺度 短縮版
+https://www.jstage.jst.go.jp/article/jjpsy1926/62/6/62_6_350/_article/-char/ja/
+1. Depression (Anxiety)
+2. Hostility
+3. Boredom
+4. Liveliness
+5. Well Being
+6. Friendliness
+7. Concentration
+8. Startle
+
+変な人たち
+確率が100%に近いのは，
+  - ちゃんとやってない
+  - 特定の戦略を用いている
+
+- ID1
+  L50のあとは，かならず50を選ぶ（forward条件）
+  50_ratio_after_L50 の確率が，条件間で乖離してる
+
+- ID4
+  High-Risk選択率が95%くらいある
+
+- ID16
+  たぶん適当にやってる
+  10と50を連続して連打してそう
+
