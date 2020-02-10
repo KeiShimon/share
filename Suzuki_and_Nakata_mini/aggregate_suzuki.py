@@ -87,7 +87,7 @@ BEHAVIOR_MEASURES = [
 # 多面的感情尺度の結果を返す関数
 def calculate_mood_state_result(df):
     score = [0] * 8
-    for i, row in df[df[TRIALCODE] == 'QuestionM'].iterrows():
+    for _, row in df[df[TRIALCODE] == 'QuestionM'].iterrows():
         score[int(row[QUESTION_M2_VALUE][0]) - 1] += int(row[RESPONSE][1])
     return score
 
@@ -129,27 +129,27 @@ for condition in [PRE, FORWARD, BACKWARD]:
     for m in MOOD_MEASURES:
         add_key(data, m + COLUMN_NAME_TAILS[condition])
 
-# 実験の開始時に行った状態尺度の集計
+# pre-experiment
 for id in range(ID_FIRST, 1+ID_LAST):
     id_string = str(id).zfill(2)
     df = pd.read_csv('split_files/' + id_string + FILE_NAME_TAILS[PRE])
 
-    mood_scores = calculate_mood_state_result(df)
-    for score, mood in zip(mood_scores, MOOD_MEASURES):
-        data[mood+COLUMN_NAME_TAILS[PRE]].append(score)
+    mood_scores = calculate_mood_state_result(df)  # type: list
+    for mood_measure, score in zip(MOOD_MEASURES, mood_scores):
+        data[mood_measure+COLUMN_NAME_TAILS[PRE]].append(score)
 
-# forward， backwardの集計
+# forward, backward
 for id in range(ID_FIRST, 1+ID_LAST):
     id_string = str(id).zfill(2)
     for condition in [FORWARD, BACKWARD]:
         df = pd.read_csv(f'split_files/{id_string}{FILE_NAME_TAILS[condition]}')
 
-        # mood については，既に集計用の関数を作成している
-        mood_scores = calculate_mood_state_result(df)
-        for score, mood in zip(mood_scores, MOOD_MEASURES):
-            data[mood+COLUMN_NAME_TAILS[condition]].append(score)
+        # register mood
+        mood_scores = calculate_mood_state_result(df)  # type: list
+        for mood_measure, score in zip(MOOD_MEASURES, mood_scores):
+            data[mood_measure+COLUMN_NAME_TAILS[PRE]].append(score)
 
-        # 結果に対する感じ方の集計
+        # register feel
         for i, row in df[df[TRIALCODE] == 'QuestionS'].iterrows():
             if row[QUESTION_S_VALUE].startswith('５０点が外れたとき'):
                 column_name = FEEL_L50
@@ -163,7 +163,7 @@ for id in range(ID_FIRST, 1+ID_LAST):
             response_value = int(row[RESPONSE][-1])
             data[column_name].append(response_value)
 
-        # 行動データの集計
+        # behavior
         risky_choices = {
             RISKY_OVERALL: 0, RISKY_NOFIRST: 0,
             RISKY_LOSE: 0, CASES_LOSE: 0,
@@ -172,7 +172,7 @@ for id in range(ID_FIRST, 1+ID_LAST):
             RISKY_G10: 0, CASES_G10: 0,
             RISKY_L50: 0, CASES_L50: 0,
             RISKY_G50: 0, CASES_G50: 0,
-        }  # id毎の行動データをここに集計し，最後に data に格納する
+        }
         last_outcome = ''  # 前回の課題の結果を格納する
         lost_last_time = True  # 前回がGainだったかLoseだったか
 
@@ -185,43 +185,35 @@ for id in range(ID_FIRST, 1+ID_LAST):
 
             if row[TRIALNUM] != 2:  # not first trial
                 risky_choices[RISKY_NOFIRST] += chose_risky
+
                 if lost_last_time:
+                    risky_choices[CASES_LOSE] += 1
                     risky_choices[RISKY_LOSE] += chose_risky
                 else:
+                    risky_choices[CASES_GAIN] += 1
                     risky_choices[RISKY_GAIN] += chose_risky
 
                 if last_outcome == 'L10':
+                    risky_choices[CASES_L10] += 1
                     risky_choices[RISKY_L10] += chose_risky
                 elif last_outcome == 'G10':
+                    risky_choices[CASES_G10] += 1
                     risky_choices[RISKY_G10] += chose_risky
                 elif last_outcome == 'L50':
+                    risky_choices[CASES_L50] += 1
                     risky_choices[RISKY_L50] += chose_risky
                 else:  # last_outcome == 'G50'
-                    risky_choices[RISKY_G50] += chose_risky
-
-            if row[TRIALNUM] != 72:  # not last trial
-                if lost_this_time:
-                    risky_choices[CASES_LOSE] += 1
-                else:
-                    risky_choices[CASES_GAIN] += 1
-
-                if outcome == 'L10':
-                    risky_choices[CASES_L10] += 1
-                elif outcome == 'G10':
-                    risky_choices[CASES_G10] += 1
-                elif outcome == 'L50':
-                    risky_choices[CASES_L50] += 1
-                else:  # outcome == 'G50'
                     risky_choices[CASES_G50] += 1
+                    risky_choices[RISKY_G50] += chose_risky
 
             last_outcome = outcome
             lost_last_time = lost_this_time
 
-        # debug: check the correctness of the number of the cases
+        # debug, check the number of cases
         assert 140 == risky_choices[CASES_G10] + risky_choices[CASES_G50]\
             + risky_choices[CASES_L10] + risky_choices[CASES_L50]
         assert 140 == risky_choices[CASES_LOSE] + risky_choices[CASES_GAIN]
-
+        # calculate ratio
         risky_choices[RISKY_OVERALL] /= 144
         risky_choices[RISKY_NOFIRST] /= 140
         risky_choices[RISKY_G10] /= risky_choices[CASES_G10]
@@ -230,7 +222,7 @@ for id in range(ID_FIRST, 1+ID_LAST):
         risky_choices[RISKY_L50] /= risky_choices[CASES_L50]
         risky_choices[RISKY_LOSE] /= risky_choices[CASES_LOSE]
         risky_choices[RISKY_GAIN] /= risky_choices[CASES_GAIN]
-
+        # register behavior
         for key, value in risky_choices.items():
             data[key + COLUMN_NAME_TAILS[condition]].append(value)
 
@@ -239,5 +231,3 @@ assert_data_length(data)
 # %%
 df_aggregated = pd.DataFrame(data).round(4)
 df_aggregated.to_csv('aggregate_suzuki.csv', index=None)
-
-# %%
