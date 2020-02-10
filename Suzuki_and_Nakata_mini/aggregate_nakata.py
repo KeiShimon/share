@@ -1,11 +1,9 @@
 # %%
-import numpy as np
 import os
+import numpy as np
 import pandas as pd
 
 from collections import OrderedDict
-
-nan = np.nan
 
 # %%
 # 参加者情報
@@ -33,6 +31,7 @@ CONDITION = 'condition'
 PRE = 'pre'
 FORWARD, BACKWARD = 'forward', 'backward'
 CUSHION, SOFT, HARD = 'cushion', 'soft', 'hard'
+PRE_NUM, CONTROL_NUM, SOFT_NUM, HARD_NUM = 0, 1, 2, 3
 CONTROL = 'control'
 COLUMN_NAME_TAILS = {
     PRE: '_pre',
@@ -48,7 +47,6 @@ FILE_NAME_TAILS = {
     SOFT: '_cushion_soft.csv',
     HARD: '_cushion_hard.csv'
 }
-CONDITION_TO_INT = {PRE: 0, CONTROL: 1, SOFT: 2, HARD: 3}
 
 # 多面的感情尺度
 DEPRESSION, HOSTILITY = 'depression', 'hostility'
@@ -91,7 +89,7 @@ BEHAVIOR_MEASURES = [
 # 多面的感情尺度の結果を返す関数
 def calculate_mood_state_result(df):
     score = [0] * 8
-    for i, row in df[df[TRIALCODE] == 'QuestionM'].iterrows():
+    for _, row in df[df[TRIALCODE] == 'QuestionM'].iterrows():
         score[int(row[QUESTION_M2_VALUE][0]) - 1] += int(row[RESPONSE][1])
     return score
 
@@ -116,14 +114,14 @@ def assert_data_length(data):
 # %%
 # softかhardか
 dirs = set(os.listdir('split_files'))
-conditions = [1] * (ID_LAST-ID_FIRST+1)
+conditions = [CONTROL_NUM] * (ID_LAST-ID_FIRST+1)
 cushion_conditions = []
 for id in range(ID_FIRST, 1+ID_LAST):
-    soft_file_name = f'{str(id).zfill(2)}{FILE_NAME_TAILS[SOFT]}'
+    soft_file_name = str(id).zfill(2) + FILE_NAME_TAILS[SOFT]
     if soft_file_name in dirs:
-        cushion_conditions.append(2)
+        cushion_conditions.append(SOFT_NUM)
     else:
-        cushion_conditions.append(3)
+        cushion_conditions.append(HARD_NUM)
 conditions += cushion_conditions
 
 # %%
@@ -187,54 +185,44 @@ for id in range(ID_FIRST, 1+ID_LAST):
 
             if row[TRIALNUM] != 2:  # not first trial
                 risky_choices[RISKY_NOFIRST] += chose_risky
+
                 if lost_last_time:
+                    risky_choices[CASES_LOSE] += 1
                     risky_choices[RISKY_LOSE] += chose_risky
                 else:
+                    risky_choices[CASES_GAIN] += 1
                     risky_choices[RISKY_GAIN] += chose_risky
 
                 if last_outcome == 'L10':
+                    risky_choices[CASES_L10] += 1
                     risky_choices[RISKY_L10] += chose_risky
                 elif last_outcome == 'G10':
+                    risky_choices[CASES_G10] += 1
                     risky_choices[RISKY_G10] += chose_risky
                 elif last_outcome == 'L50':
+                    risky_choices[CASES_L50] += 1
                     risky_choices[RISKY_L50] += chose_risky
                 else:  # last_outcome == 'G50'
-                    risky_choices[RISKY_G50] += chose_risky
-
-            if row[TRIALNUM] != 72:  # not last trial
-                if lost_this_time:
-                    risky_choices[CASES_LOSE] += 1
-                else:
-                    risky_choices[CASES_GAIN] += 1
-
-                if outcome == 'L10':
-                    risky_choices[CASES_L10] += 1
-                elif outcome == 'G10':
-                    risky_choices[CASES_G10] += 1
-                elif outcome == 'L50':
-                    risky_choices[CASES_L50] += 1
-                else:  # outcome == 'G50'
                     risky_choices[CASES_G50] += 1
+                    risky_choices[RISKY_G50] += chose_risky
 
             last_outcome = outcome
             lost_last_time = lost_this_time
 
-    # debug
+    # debug, check the number of cases
     assert 280 == risky_choices[CASES_G10] + risky_choices[CASES_G50]\
         + risky_choices[CASES_L10] + risky_choices[CASES_L50]
     assert 280 == risky_choices[CASES_LOSE] + risky_choices[CASES_GAIN]
 
-    # mood
-    mood_scores /= 2
-    for score, mood in zip(mood_scores, MOOD_MEASURES):
-        data[mood].append(score)
+    # register mood
+    for column_name, score in zip(MOOD_MEASURES, mood_scores):
+        data[column_name].append(score / 2)   # halven for backward/forward
 
-    # feel
-    for key in feel_scores:
-        feel_scores[key] /= 2
-        data[key].append(feel_scores[key])
+    # register feel
+    for column_name, score in feel_scores:
+        data[column_name].append(score / 2)  # halven for backward/forward
 
-    # behavior
+    # behavior, calculate the ratio
     risky_choices[RISKY_OVERALL] /= 288
     risky_choices[RISKY_NOFIRST] /= 280
     risky_choices[RISKY_G10] /= risky_choices[CASES_G10]
@@ -243,7 +231,6 @@ for id in range(ID_FIRST, 1+ID_LAST):
     risky_choices[RISKY_L50] /= risky_choices[CASES_L50]
     risky_choices[RISKY_LOSE] /= risky_choices[CASES_LOSE]
     risky_choices[RISKY_GAIN] /= risky_choices[CASES_GAIN]
-
     # register behavior
     for key, value in risky_choices.items():
         data[key].append(value)
@@ -258,7 +245,7 @@ for id in range(ID_FIRST, 1+ID_LAST):
     else:
         condition = HARD
 
-    # read
+    # read from file
     id_string = str(id).zfill(2)
     df = pd.read_csv(f'split_files/{id_string}{FILE_NAME_TAILS[condition]}')
 
@@ -297,7 +284,7 @@ for id in range(ID_FIRST, 1+ID_LAST):
     }
     last_outcome = ''  # 前回の課題の結果を格納する
     lost_last_time = True  # 前回がGainだったかLoseだったか
-    # calculate behavior
+    # aggregate behavior
     for i, row in df[df[RESPONSE] == '0'].iterrows():
         outcome = row[TRIALCODE][-3:]
         chose_risky = outcome.endswith('50')
@@ -307,42 +294,34 @@ for id in range(ID_FIRST, 1+ID_LAST):
 
         if row[TRIALNUM] != 2:  # not first trial
             risky_choices[RISKY_NOFIRST] += chose_risky
+
             if lost_last_time:
+                risky_choices[CASES_LOSE] += 1
                 risky_choices[RISKY_LOSE] += chose_risky
             else:
+                risky_choices[CASES_GAIN] += 1
                 risky_choices[RISKY_GAIN] += chose_risky
 
             if last_outcome == 'L10':
+                risky_choices[CASES_L10] += 1
                 risky_choices[RISKY_L10] += chose_risky
             elif last_outcome == 'G10':
+                risky_choices[CASES_G10] += 1
                 risky_choices[RISKY_G10] += chose_risky
             elif last_outcome == 'L50':
+                risky_choices[CASES_L50] += 1
                 risky_choices[RISKY_L50] += chose_risky
             else:  # last_outcome == 'G50'
-                risky_choices[RISKY_G50] += chose_risky
-
-        if row[TRIALNUM] != 72:  # not last trial
-            if lost_this_time:
-                risky_choices[CASES_LOSE] += 1
-            else:
-                risky_choices[CASES_GAIN] += 1
-
-            if outcome == 'L10':
-                risky_choices[CASES_L10] += 1
-            elif outcome == 'G10':
-                risky_choices[CASES_G10] += 1
-            elif outcome == 'L50':
-                risky_choices[CASES_L50] += 1
-            else:  # outcome == 'G50'
                 risky_choices[CASES_G50] += 1
+                risky_choices[RISKY_G50] += chose_risky
 
         last_outcome = outcome
         lost_last_time = lost_this_time
-    # debug
+    # debug, check the number of the cases
     assert 140 == risky_choices[CASES_G10] + risky_choices[CASES_G50]\
         + risky_choices[CASES_L10] + risky_choices[CASES_L50]
     assert 140 == risky_choices[CASES_LOSE] + risky_choices[CASES_GAIN]
-    # calculate into ratio based on cases
+    # calculate the ratio
     risky_choices[RISKY_OVERALL] /= 144
     risky_choices[RISKY_NOFIRST] /= 140
     risky_choices[RISKY_G10] /= risky_choices[CASES_G10]
@@ -352,8 +331,8 @@ for id in range(ID_FIRST, 1+ID_LAST):
     risky_choices[RISKY_LOSE] /= risky_choices[CASES_LOSE]
     risky_choices[RISKY_GAIN] /= risky_choices[CASES_GAIN]
     # register behavior
-    for key, value in risky_choices.items():
-        data[key].append(value)
+    for column_name, value in risky_choices.items():
+        data[column_name].append(value)
 
 assert_data_length(data)
 
@@ -363,14 +342,3 @@ df_aggregate_nakata = pd.DataFrame(data)\
 
 # %%
 df_aggregate_nakata.to_csv('aggregate_nakata.csv', index=None)
-
-# %%
-df_aggregate_nakata.columns
-
-# %%
-df_aggregate_nakata
-
-# %%
-df_aggregate_nakata.sort_values(CONDITION)
-
-# %%
