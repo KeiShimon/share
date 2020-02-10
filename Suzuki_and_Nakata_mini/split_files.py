@@ -25,7 +25,7 @@ for id in range(1, 21):
     df.loc[1:40, columns_to_export]\
         .to_csv(f'split_files/{id_string}_pre_experiment.csv', index=None)
 
-    # forward.csv と backward.csv を出力
+    # forward.csv と backward.csv を出力する
     # df[df['trialcode'] != 'Rest'] とすることで，'tiralcode'の中身が'Rest'でないものだけを抽出できる
     # DataFrameを参照するかどうかを，True/Falseで決める方法を用いている
     if df.loc[0, 'group'][0] == 'F':
@@ -39,9 +39,9 @@ for id in range(1, 21):
         df.loc[47:238, columns_to_export][df['trialcode'] != 'Rest']\
             .to_csv(f'split_files/{id_string}_backward.csv', index=None)
 
-    # cussion.csv を出力
-    cussion = 'soft' if df.at[0, 'group'][2] == 'S' else 'hard'
+    # cushion.csv を出力する
+    cushion = 'soft' if df.at[0, 'group'][2] == 'S' else 'hard'
     df.loc[433:624, columns_to_export][df['trialcode'] != 'Rest']\
-        .to_csv(f'split_files/{id_string}_cushion_{cussion}.csv', index=None)
+        .to_csv(f'split_files/{id_string}_cushion_{cushion}.csv', index=None)
 
 # %%
