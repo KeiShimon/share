@@ -8,7 +8,7 @@ from collections import OrderedDict
 # %%
 # 参加者情報
 ID = 'id'
-ID_FIRST, ID_LAST = 1, 20
+ID_FIRST, ID_LAST = 1, 43
 
 # 列名
 TRIALNUM, TRIALCODE = 'trialnum', 'trialcode'
@@ -219,7 +219,7 @@ for id in range(ID_FIRST, 1+ID_LAST):
         data[column_name].append(score / 2)   # halven for backward/forward
 
     # register feel
-    for column_name, score in feel_scores:
+    for column_name, score in feel_scores.items():
         data[column_name].append(score / 2)  # halven for backward/forward
 
     # behavior, calculate the ratio
@@ -341,4 +341,7 @@ df_aggregate_nakata = pd.DataFrame(data)\
     .round(4).sort_values(by=[ID, CONDITION])
 
 # %%
-df_aggregate_nakata.to_csv('aggregate_nakata.csv', index=None)
+df_aggregate_nakata.to_csv('data/aggregate_nakata.csv', index=None)
+
+
+# %%

@@ -6,7 +6,7 @@ from collections import OrderedDict
 # %%
 # 参加者情報
 ID = 'id'
-ID_FIRST, ID_LAST = 1, 20
+ID_FIRST, ID_LAST = 1, 43
 
 # 列名
 TRIALNUM, TRIALCODE = 'trialnum', 'trialcode'
@@ -147,7 +147,7 @@ for id in range(ID_FIRST, 1+ID_LAST):
         # register mood
         mood_scores = calculate_mood_state_result(df)  # type: list
         for mood_measure, score in zip(MOOD_MEASURES, mood_scores):
-            data[mood_measure+COLUMN_NAME_TAILS[PRE]].append(score)
+            data[mood_measure+COLUMN_NAME_TAILS[condition]].append(score)
 
         # register feel
         for i, row in df[df[TRIALCODE] == 'QuestionS'].iterrows():
@@ -230,4 +230,15 @@ assert_data_length(data)
 
 # %%
 df_aggregated = pd.DataFrame(data).round(4)
-df_aggregated.to_csv('aggregate_suzuki.csv', index=None)
+df_aggregated.to_csv('data/aggregate_suzuki.csv', index=None)
+
+# %%
+data
+
+# %%
+len(data)
+
+# %%
+data[ID]
+
+# %%
